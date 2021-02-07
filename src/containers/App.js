@@ -1,49 +1,53 @@
-import React, { Component } from 'react';
+import React, { useState, useEffect } from 'react';
 import CardList from '../components/CardList';
 import SearchBox from '../components/SearchBox';
 import Scroll from '../components/Scroll';
 import ErrorBoundary from '../components/ErrorBoundary';
 import './App.css';
 
-class App extends Component {
-    constructor() {
-        super();
-        this.state = {
-            robots: [],
-            searchfield: ''
-        }
-    }
+import { setSearchField, requestRobots } from '../actions';
+import { connect } from 'react-redux';
 
-    componentDidMount() {
-        fetch('https://jsonplaceholder.typicode.com/users')
-            .then(response => response.json())
-            .then(users => this.setState({ robots: users }));
-    }
-
-    onSearchChange = (event) => {   //make sure you use this function syntax with = () => {} so the 'this' refers to App
-        this.setState({ searchfield: event.target.value });
-    }
-
-    render() {
-        const { robots, searchfield } = this.state;
-        const filteredRobots = robots.filter(robot => {
-            return robot.name.toLowerCase().includes(searchfield.toLowerCase());
-        });
-        return !robots.length ?   //if robots.length is 0, this will evaluate to !0 which is true
-        <h1 className="ma3">Loading...</h1> :
-        (
-            <div className="tc">
-                <h1 className='f1'>RoboFriends</h1>
-                <SearchBox searchChange={this.onSearchChange} />
-                <h2 className='f2'>{filteredRobots.length} Friends Found...</h2>
-                <Scroll>
-                    <ErrorBoundary>
-                        <CardList robots={filteredRobots} />
-                    </ErrorBoundary>
-                </Scroll>
-            </div>
-        );
+const mapStateToProps = state => {
+    return {
+        searchfield: state.searchRobots.searchfield,
+        robots: state.requestRobots.robots,
+        isPending: state.requestRobots.isPending,
+        error: state.requestRobots.error
     }
 }
 
-export default App;
+const mapDispatchToProps = dispatch => {
+    return {
+        onSearchChange: (event) => dispatch(setSearchField(event.target.value)),
+        onRequestRobots: () => dispatch(requestRobots())
+    }
+}
+
+const App = (props) => {
+
+    useEffect(() => {
+        props.onRequestRobots();
+    }, [])
+
+    const filteredRobots = props.robots.filter(robot => {
+        return robot.name.toLowerCase().includes(props.searchfield.toLowerCase());
+    });
+
+    return props.isPending ?   //if robots.length is 0, this will evaluate to !0 which is true
+    <h1 className="ma3">Loading...</h1> :
+    (
+        <div className="tc">
+            <h1 className='f1'>RoboFriends</h1>
+            <SearchBox searchChange={props.onSearchChange} />
+            <h2 className='f2'>{filteredRobots.length} Friends Found...</h2>
+            <Scroll>
+                <ErrorBoundary>
+                    <CardList robots={filteredRobots} />
+                </ErrorBoundary>
+            </Scroll>
+        </div>
+    );
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(App);
